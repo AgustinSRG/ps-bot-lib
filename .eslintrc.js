@@ -22,7 +22,7 @@ module.exports = {
     "max-classes-per-file": 0,
     "eqeqeq": 2,
     "semi": 2,
-    "indent": ["error", 4],
+    "indent": ["error", 4, { "SwitchCase": 1 }],
     "no-var-requires": 0,
     "@typescript-eslint/explicit-function-return-type": 0,
     "@typescript-eslint/no-explicit-any": 0,

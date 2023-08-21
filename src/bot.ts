@@ -5,8 +5,10 @@
 import { EventEmitter } from "events";
 import SockJS from 'sockjs-client';
 import Https from 'https';
-import { toId } from "./utils";
+import { parseUserIdentity, toId } from "./utils";
 import { PokemonShowdownBotConfig } from "./config";
+import { RoomsList, UserIdentity } from "./models";
+import { PokemonShowdownFormat, parsePokemonShowdownFormats } from "./formats";
 
 const Default_Room = ""; // If the server sends a message without specifying the room
 
@@ -73,6 +75,93 @@ export declare interface PokemonShowdownBot {
      *  - initialMsg: True if it's a room initial message
      */
     on(event: 'line', handler: (room: string, line: string, splittedLine: string[], initialMsg: boolean) => void): this;
+
+    /**
+     * Receives the list of available battle formats in the server
+     */
+    on(event: 'formats', handler: (formats: Map<string, PokemonShowdownFormat>) => void): this;
+
+    /**
+     * Query response event
+     *  - queryType: Type of query
+     *  - response: JSON response from the server
+     */
+    on(event: 'query-response', handler: (queryType: string, response: any) => void): this;
+
+    /**
+     * Specific query response for the 'rooms' query
+     * It provides the official and public room list of the server.
+     */
+    on(event: 'rooms', handler: (rooms: RoomsList) => void): this;
+
+    /**
+     * Popup received
+     */
+    on(event: 'popup', handler: (message: string) => void): this;
+
+    /**
+     * Event triggered when the bot joins a room
+     *  - room: The room ID
+     *  - roomType: Room type. Examples: battle,chat
+     */
+    on(event: 'room-join', handler: (room: string, roomType: string) => void): this;
+
+    /**
+     * Event triggered when the bot attempts to join a room
+     * but it cannot join. For example, this can happen if the rok does not exist.
+     */
+    on(event: 'room-join-failure', handler: (room: string, code: string, message: string) => void): this;
+
+    /**
+     * Room title received: 
+     *  - room: The room ID
+     *  - title: Title of the room
+     */
+    on(event: 'room-title', handler: (room: string, title: string) => void): this;
+
+    /**
+     * Event emitted if the room is renamed:
+     *  - room: The old room ID
+     *  - newId: The new room ID
+     *  - newTitle: The new room title
+     */
+    on(event: 'room-rename', handler: (room: string, newId: string, newTitle: string) => void): this;
+
+    /**
+     * Event triggered when the bot leaves a room
+     *  - room: The room ID
+     */
+    on(event: 'room-leave', handler: (room: string, roomType: string) => void): this;
+
+    /**
+     * Initial room users list:
+     *  - room: The old room ID
+     *  - userCount: Number of users (including guests)
+     *  - users: List of users
+     */
+    on(event: 'room-users', handler: (room: string, userCount: number, users: UserIdentity[]) => void): this;
+
+    /**
+     * Event triggered when an user joins a room
+     *  - room: Room ID
+     *  - user: Identity of the user who joined the room
+     */
+    on(event: 'user-join', handler: (room: string, user: UserIdentity) => void): this;
+
+    /**
+     * Event triggered when an user leaves a room
+     *  - room: Room ID
+     *  - user: Identity of the user who left the room
+     */
+    on(event: 'user-leave', handler: (room: string, user: UserIdentity) => void): this;
+
+    /**
+     * Event triggered when an user leaves a room
+     *  - room: Room ID
+     *  - user: Id of the renamed user
+     *  - newUser: New identity of the user
+     */
+    on(event: 'user-rename', handler: (room: string, user: string, newUser: UserIdentity) => void): this;
 }
 
 /**
@@ -610,6 +699,41 @@ export class PokemonShowdownBot extends EventEmitter {
     }
 
     /**
+     * Sends the '/cmd rooms' command
+     * The server will return a query response containing the list of rooms
+     * Listen for the 'rooms' event to get the result
+     */
+    public queryRooms() {
+        this.sendToGlobal('/cmd rooms');
+    }
+
+    /**
+     * Joins a room
+     * @param room The room to join
+     * @param silent True if you do not want the server to send an error reply
+     */
+    public joinRoom(room: string, silent?: boolean) {
+        if (silent) {
+            this.sendToGlobal("/noreply /join " + room);
+        } else {
+            this.sendToGlobal("/join " + room);
+        }
+    }
+
+    /**
+     * Leaves a room
+     * @param room The room to leave
+     * @param silent True if you do not want the server to send an error reply
+     */
+    public leaveRoom(room: string, silent?: boolean) {
+        if (silent) {
+            this.sendToGlobal("/noreply /join " + room);
+        } else {
+            this.sendToGlobal("/join " + room);
+        }
+    }
+
+    /**
      * Receives a message
      * @param msg The message
      */
@@ -656,29 +780,110 @@ export class PokemonShowdownBot extends EventEmitter {
         const splittedLine = line.substr(1).split('|');
 
         switch (splittedLine[0]) {
-        case 'challstr':
-            this.challengeString = {
-                id: splittedLine[1],
-                str: splittedLine[2],
-            };
-            this.emit("can-login");
-            break;
-        case 'updateuser':
-            {
-                const oldNick = this.status.nick;
-                this.status.isGuest = !parseInt(splittedLine[2]);
-                if (splittedLine[1] && splittedLine[1].endsWith("@!")) {
-                    this.status.nick = splittedLine[1].substr(0, splittedLine[1].length - 2);
-                    this.status.away = true;
-                } else {
-                    this.status.nick = splittedLine[1];
-                    this.status.away = false;
+            case 'challstr':
+                this.challengeString = {
+                    id: splittedLine[1],
+                    str: splittedLine[2],
+                };
+                this.emit("can-login");
+                break;
+            case 'updateuser':
+                {
+                    const oldNick = this.status.nick;
+                    this.status.isGuest = !parseInt(splittedLine[2]);
+                    if (splittedLine[1] && splittedLine[1].endsWith("@!")) {
+                        this.status.nick = splittedLine[1].substr(0, splittedLine[1].length - 2);
+                        this.status.away = true;
+                    } else {
+                        this.status.nick = splittedLine[1];
+                        this.status.away = false;
+                    }
+                    if (toId(oldNick) !== toId(this.status.nick) && !this.status.isGuest) {
+                        this.emit("renamed", this.status.nick);
+                    }
                 }
-                if (toId(oldNick) !== toId(this.status.nick) && !this.status.isGuest) {
-                    this.emit("renamed", this.status.nick);
+                break;
+            case 'formats':
+                {
+                    const formats = parsePokemonShowdownFormats(splittedLine.slice(1).join("|"));
+                    this.emit("formats", formats);
                 }
-            }
-            break;
+                break;
+            case 'queryresponse':
+                {
+                    const queryType = splittedLine[1] || "";
+                    try {
+                        const queryResult = JSON.parse(splittedLine.slice(2).join("|"));
+                        this.emit("query-response", queryType, queryResult);
+
+                        if (queryType === "rooms") {
+                            this.emit("rooms", queryResult);
+                        }
+                    } catch (ex) {
+                        this.emit("error", ex);
+                    }
+                }
+                break;
+            case 'popup':
+                {
+                    const msg = splittedLine.slice(1).join("|");
+                    this.emit("popup", msg);
+                }
+                break;
+            case 'init':
+                {
+                    const roomType = splittedLine[1] || "";
+                    this.emit("room-join", room, roomType);
+                }
+                break;
+            case 'title':
+                {
+                    const title = splittedLine.slice(1).join("|");
+                    this.emit("room-title", room, title);
+                }
+                break;
+            case 'users':
+                {
+                    const usersArray = splittedLine.slice(1).join("|").split(",");
+                    this.emit("room-users", room, parseInt(usersArray[0], 10) || 0, usersArray.slice(1).map(parseUserIdentity));
+                }
+                break;
+            case 'J':
+            case 'j':
+                {
+                    this.emit("user-join", room, parseUserIdentity(splittedLine[1] || ""));
+                }
+                break;
+            case 'L':
+            case 'l':
+                {
+                    this.emit("user-leave", room, parseUserIdentity(splittedLine[1] || ""));
+                }
+                break;
+            case 'n':
+            case 'N':
+                {
+                    this.emit("user-rename", room, splittedLine[2] || "", parseUserIdentity(splittedLine[1] || ""));
+                }
+                break;
+            case 'deinit':
+                {
+                    this.emit("room-leave", room);
+                }
+                break;
+            case 'noinit':
+                {
+                    const code = splittedLine[1] || "";
+                    if (splittedLine[1] === "rename") {
+                        const newId = splittedLine[2] || "";
+                        const newTitle = splittedLine.slice(3).join("|");
+                        this.emit("room-rename", room, newId, newTitle);
+                    } else {
+                        const message = splittedLine.slice(2).join("|");
+                        this.emit("room-join-failure", code, message);
+                    }
+                }
+                break;
         }
         this.emit('line', room, line, splittedLine, initialMsg);
     }
