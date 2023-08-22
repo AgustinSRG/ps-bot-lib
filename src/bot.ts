@@ -7,7 +7,7 @@ import SockJS from 'sockjs-client';
 import Https from 'https';
 import { parseUserIdentity, toId } from "./utils";
 import { PokemonShowdownBotConfig } from "./config";
-import { RoomsList, UserIdentity } from "./models";
+import { ChatMessage, RoomsList, UserIdentity, parseChatMessage } from "./models";
 import { PokemonShowdownFormat, parsePokemonShowdownFormats } from "./formats";
 
 const Default_Room = ""; // If the server sends a message without specifying the room
@@ -162,6 +162,44 @@ export declare interface PokemonShowdownBot {
      *  - newUser: New identity of the user
      */
     on(event: 'user-rename', handler: (room: string, user: string, newUser: UserIdentity) => void): this;
+
+    /**
+     * Event triggered when a chat message is received
+     * Note: This will not trigger if the bot is the author of the message
+     *  - room: Room ID
+     *  - user: User who sent the message
+     *  - message: The message
+     *  - serverTime: The server timestamp for that message
+     */
+    on(event: 'chat', handler: (room: string, user: UserIdentity, message: ChatMessage, serverTime?: number) => void): this;
+
+    /**
+     * Event triggered when a chat message is received, and the bot is the author
+     *  - room: Room ID
+     *  - user: User who sent the message
+     *  - message: The message
+     *  - serverTime: The server timestamp for that message
+     */
+    on(event: 'chat-echo', handler: (room: string, user: UserIdentity, message: ChatMessage, serverTime?: number) => void): this;
+
+    /**
+     * Event triggered when a private message is received
+     * Note: This will not trigger if the bot is the sender of the message
+     *  - room: Room ID
+     *  - from: User who sent the message
+     *  - to: User who received the message
+     *  - message: The message
+     */
+    on(event: 'pm', handler: (room: string, from: UserIdentity, to: UserIdentity, message: ChatMessage) => void): this;
+
+    /**
+     * Event triggered when a private message is received, and the bot is the sender
+     *  - room: Room ID
+     *  - from: User who sent the message
+     *  - to: User who received the message
+     *  - message: The message
+     */
+    on(event: 'pm-echo', handler: (room: string, from: UserIdentity, to: UserIdentity, message: ChatMessage) => void): this;
 }
 
 /**
@@ -884,11 +922,49 @@ export class PokemonShowdownBot extends EventEmitter {
                     }
                 }
                 break;
+            case 'c':
+                {
+                    const userIdentity = parseUserIdentity(splittedLine[1] || "");
+                    const message = parseChatMessage(splittedLine.slice(2).join("|"));
+
+                    if (userIdentity.id === toId(this.status.nick)) {
+                        this.emit("chat-echo", room, userIdentity, message);
+                    } else {
+                        this.emit("chat", room, userIdentity, message);
+                    }
+                }
+                break;
+            case 'c:':
+                {
+                    const serverTime = parseInt(splittedLine[1] || "") || 0;
+                    const userIdentity = parseUserIdentity(splittedLine[2] || "");
+                    const message = parseChatMessage(splittedLine.slice(3).join("|"));
+
+                    if (userIdentity.id === toId(this.status.nick)) {
+                        this.emit("chat-echo", room, userIdentity, message, serverTime);
+                    } else {
+                        this.emit("chat", room, userIdentity, message, serverTime);
+                    }
+                }
+                break;
+            case 'pm':
+                {
+                    const fromUser = parseUserIdentity(splittedLine[1] || "");
+                    const toUser = parseUserIdentity(splittedLine[2] || "");
+                    const message = parseChatMessage(splittedLine.slice(3).join("|"));
+
+                    if (fromUser.id === toId(this.status.nick)) {
+                        this.emit("pm-echo", fromUser, toUser, message);
+                    } else {
+                        this.emit("pm", fromUser, toUser, message);
+                    }
+                }
+                break;
         }
         this.emit('line', room, line, splittedLine, initialMsg);
     }
 
-    destroy() {
+    public destroy() {
         this.disconnect();
     }
 }
