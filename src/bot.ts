@@ -338,7 +338,7 @@ export class PokemonShowdownBot extends EventEmitter {
      * Gets the server connection URL
      * @returns The server connection URL
      */
-    public getConnectionUrl(): string {
+    private getConnectionUrl(): string {
         return `${this.config.secure ? 'https' : 'http'}://${this.config.host}:${this.config.port}/showdown/`;
     }
 
@@ -346,7 +346,7 @@ export class PokemonShowdownBot extends EventEmitter {
      * Gets the login URL
      * @returns The login URL
      */
-    public getLoginUrl(): string {
+    private getLoginUrl(): string {
         return `https://${this.config.loginServer || Default_Login_Server}/~~${encodeURIComponent(this.config.serverId || Default_Server_Id)}/action.php`;
     }
 
@@ -425,10 +425,10 @@ export class PokemonShowdownBot extends EventEmitter {
     }
 
     /**
-     * 
+     * Tries the connection
      * @param delay The delay (ms)
      */
-    public retryConnect(delay: number) {
+    private retryConnect(delay: number) {
         if (this.connectionRetryTimer) {
             clearTimeout(this.connectionRetryTimer);
             this.connectionRetryTimer = null;
@@ -573,21 +573,6 @@ export class PokemonShowdownBot extends EventEmitter {
                 this.emit("rename-failure", err);
             });
         }
-    }
-
-    /**
-     * @param {Number} delay
-     * @param {String} nick
-     * @param {String} pass - Passowrd if needed
-     */
-    public retryRename(delay: number, nick: string, pass?: string) {
-        if (this.loginRetryTimer) {
-            clearTimeout(this.loginRetryTimer);
-            this.loginRetryTimer = null;
-        }
-        this.loginRetryTimer = setTimeout(function () {
-            this.rename(nick, pass);
-        }.bind(this), delay);
     }
 
     /**
@@ -964,6 +949,9 @@ export class PokemonShowdownBot extends EventEmitter {
         this.emit('line', room, line, splittedLine, initialMsg);
     }
 
+    /**
+     * Closes the connection and releases any allocated resources
+     */
     public destroy() {
         this.disconnect();
     }
