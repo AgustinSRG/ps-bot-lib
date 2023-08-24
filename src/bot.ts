@@ -71,7 +71,7 @@ export declare interface PokemonShowdownBot {
      * New line received
      *  - room: Room ID
      *  - line: Line received
-     *  - splittedLine: Line splitted by "|". The initial "|"" is skipped, so splittedLine[0] is the message type
+     *  - splittedLine: Line splitted by "|". The initial "|" is skipped, so splittedLine[0] is the message type
      *  - initialMsg: True if it's a room initial message
      */
     on(event: 'line', handler: (room: string, line: string, splittedLine: string[], initialMsg: boolean) => void): this;
@@ -131,7 +131,7 @@ export declare interface PokemonShowdownBot {
      * Event triggered when the bot leaves a room
      *  - room: The room ID
      */
-    on(event: 'room-leave', handler: (room: string, roomType: string) => void): this;
+    on(event: 'room-leave', handler: (room: string) => void): this;
 
     /**
      * Initial room users list:
@@ -185,21 +185,19 @@ export declare interface PokemonShowdownBot {
     /**
      * Event triggered when a private message is received
      * Note: This will not trigger if the bot is the sender of the message
-     *  - room: Room ID
      *  - from: User who sent the message
      *  - to: User who received the message
      *  - message: The message
      */
-    on(event: 'pm', handler: (room: string, from: UserIdentity, to: UserIdentity, message: ChatMessage) => void): this;
+    on(event: 'pm', handler: (from: UserIdentity, to: UserIdentity, message: ChatMessage) => void): this;
 
     /**
      * Event triggered when a private message is received, and the bot is the sender
-     *  - room: Room ID
      *  - from: User who sent the message
      *  - to: User who received the message
      *  - message: The message
      */
-    on(event: 'pm-echo', handler: (room: string, from: UserIdentity, to: UserIdentity, message: ChatMessage) => void): this;
+    on(event: 'pm-echo', handler: (from: UserIdentity, to: UserIdentity, message: ChatMessage) => void): this;
 }
 
 /**
