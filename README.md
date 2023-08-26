@@ -1,5 +1,6 @@
 # Pokemon Showdown bot library
 
+[![npm version](https://badge.fury.io/js/%40asanrom%2Fps-bot-lib.svg)](https://badge.fury.io/js/%40asanrom%2Fps-bot-lib)
 [![Node.js CI](https://github.com/AgustinSRG/ps-bot-lib/actions/workflows/node.js.yml/badge.svg)](https://github.com/AgustinSRG/ps-bot-lib/actions/workflows/node.js.yml)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg?style=flat)](https://github.com/AgustinSRG/ps-bot-lib/blob/master/LICENSE)
 
