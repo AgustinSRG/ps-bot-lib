@@ -1,6 +1,6 @@
 {
   "name": "@asanrom/ps-bot-lib",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Simple library to create bots for Pokemon Showdown",
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
@@ -38,7 +38,7 @@
     "@typescript-eslint/eslint-plugin": "5.57.1",
     "@typescript-eslint/parser": "5.57.1",
     "eslint": "8.37.0",
-    "mocha": "10.2.0",
+    "mocha": "11.1.0",
     "rimraf": "4.4.1",
     "ts-node": "10.9.1",
     "typedoc": "0.24.6",

@@ -619,31 +619,15 @@ export class PokemonShowdownBot extends EventEmitter {
             }
 
             while (linesToSend.length > 0) {
-                const groupLines = [];
-                let groupLinesRoom = null;
+                const lineToSend = linesToSend.shift();
 
-                for (let i = 0; i < this.maxLinesSend && linesToSend.length > 0; i++) {
-                    const roomInLine = linesToSend[0].indexOf("|") >= 0 ? linesToSend[0].split("|")[0] : "";
+                this.socket.send(lineToSend);
+                this.emit('sent', lineToSend);
 
-                    if (groupLinesRoom === null) {
-                        groupLinesRoom = roomInLine;
-                    } else if (groupLinesRoom !== roomInLine) {
-                        break;
-                    }
-
-                    groupLines.push(linesToSend.shift());
-                }
-
-                const multiLineMsg = groupLines.join("\n");
-                this.socket.send(multiLineMsg);
-                this.emit('sent', multiLineMsg);
-
-                for (let i = 0; i < groupLines.length; i++) {
-                    timeEx += this.chatThrottleDelay;
-                    this.sendingQueue.push({
-                        et: timeEx,
-                    });
-                }
+                timeEx += this.chatThrottleDelay;
+                this.sendingQueue.push({
+                    et: timeEx,
+                });
             }
         }
 
