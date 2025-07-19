@@ -47,7 +47,10 @@ export function parsePokemonShowdownFormats(str: string): Map<string, PokemonSho
     let code: number;
     let name: string;
     for (let i = 0; i < formatsArr.length; i++) {
-        commaIndex = formatsArr[i].indexOf(',');
+        if (formatsArr[i] === ",LL") {
+            continue;
+        }
+        commaIndex = formatsArr[i].lastIndexOf(',');
         if (commaIndex === -1) {
             result.set(toId(formatsArr[i]), {
                 name: formatsArr[i],

@@ -1,6 +1,6 @@
 {
   "name": "@asanrom/ps-bot-lib",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Simple library to create bots for Pokemon Showdown",
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
